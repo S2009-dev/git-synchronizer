@@ -75,8 +75,8 @@ Sync your GitHub with a VPS
 4. **Add** a `.env` file with the following lines:
 
     ```toml
-    BASE_URL = https://github.com/<YOUR_GITHUB_USERNAME>/
-    SECRET = <PASTE_ANY_GENERATED_CODE_HERE>
+    BASE_URL = "https://github.com/<YOUR_GITHUB_USERNAME>/"
+    SECRET = "<PASTE_ANY_GENERATED_CODE_HERE>" # Don't use the $ character in the secret !!!
     ```
 
 5. **Configure and run** a PHP server (apache/nginx) in `/var/git_remote` and **point** a URL to it

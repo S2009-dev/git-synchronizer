@@ -1,0 +1,10 @@
+Order Deny,Allow
+Deny from all
+
+# GitHub hooks IPS --> https://api.github.com/meta
+Allow from 192.30.252.0/22
+Allow from 185.199.108.0/22
+Allow from 140.82.112.0/20
+Allow from 143.55.64.0/20
+Allow from 2a0a:a440::/29
+Allow from 2606:50c0::/32

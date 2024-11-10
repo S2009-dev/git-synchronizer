@@ -41,8 +41,8 @@ if [ ! -d "$source" ] || [ ! -d "$dest" ]; then
 fi
 
 # Remove content of destination folder
-rm -drf "$dest/*"
-rm -drf "$dest/.*"
+rm -drf $dest/*
+rm -drf $dest/.*
 
 # Go in the folder and pull the repo
 cd "$source" || { echo "Can't open $source"; exit 1; }
@@ -56,11 +56,5 @@ fi
 
 # Copy the cpdir folder from source folder to the destination folder
 cp -r "$cpdir" "$dest" || { echo "Failed to copy content from $source/$cpdir to $dest"; exit 1; }
-
-# Remove content of source folder
-rm -drf "$source/*"
-mv "$source/.git" "$source/git"
-rm -drf "$source/.*"
-mv "$source/git" "$source/.git"
 
 echo "[$source] Repo deployed !"

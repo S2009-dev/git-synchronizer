@@ -2,13 +2,14 @@
 
 # Show help
 usage() {
-    echo "Usage: bash $0 --source=\"<source_folder>\" --dest=\"<destination_folder>\" --cpdir=\"<folder_in_source_to_copy_content>\""
+    echo "Usage: bash $0 --source=\"<source_folder>\" --dest=\"<destination_folder>\" --cpdir=\"<folder_in_source_to_copy_content>\" --postcmd=\"<execute_after_deploy>\""
     echo "Set --cpdir to \".\" to use the source_folder, or type the folder name with /. if you want to copy it's content and not the folder"
+    echo "--postcmd is optional and can be \"composer\" to install composer dependencies in the destination folder, or \"npm\" to install npm dependencies in the destination folder. You can also specify a path to a .sh file to execute after the deployment."
     exit 1
 }
 
 # Verify args
-if [ $# -ne 3 ]; then
+if [ $# -ne 4 ]; then
     usage
 fi
 
@@ -16,6 +17,7 @@ fi
 source=""
 dest=""
 cpdir=""
+postcmd=""
 
 for arg in "$@"; do
     if [[ $arg == --source=* ]]; then
@@ -24,6 +26,8 @@ for arg in "$@"; do
         dest=${arg#*=}
     elif [[ $arg == --cpdir=* ]]; then
         cpdir=${arg#*=}
+    elif [[ $arg == --postcmd=* ]]; then
+        postcmd=${arg#*=}
     else
         usage
     fi
@@ -41,8 +45,8 @@ if [ ! -d "$source" ] || [ ! -d "$dest" ]; then
 fi
 
 # Remove content of destination folder
-rm -drf $dest/*
-rm -drf $dest/.*
+rm -drf $dest/* || { echo "Failed to remove content of $dest"; exit 1; }
+rm -drf $dest/.* || { echo "Failed to remove hidden content of $dest"; exit 1; }
 
 # Go in the folder and pull the repo
 cd "$source" || { echo "Can't open $source"; exit 1; }
@@ -58,3 +62,23 @@ fi
 cp -r "$cpdir" "$dest" || { echo "Failed to copy content from $source/$cpdir to $dest"; exit 1; }
 
 echo "[$source] Repo deployed !"
+
+# Execute postcmd if defined
+if [ ! -z "$postcmd" ]; then
+    echo "Executing postcmd..."
+    
+    if [ "$postcmd" == "composer" ]; then
+        cd "$dest" || { echo "Can't open $dest"; exit 1; }
+        composer install || { echo "Failed to execute composer install"; exit 1; }
+    elif [ "$postcmd" == "npm" ]; then
+        cd "$dest" || { echo "Can't open $dest"; exit 1; }
+        npm install || { echo "Failed to execute npm install"; exit 1; }
+    else
+        if [ -f "$postcmd" ]; then
+            sh "$postcmd" || { echo "Failed to execute $postcmd"; exit 1; }
+        else
+            echo "The postcmd $postcmd is not a valid file."
+            exit 1
+        fi
+    fi
+fi

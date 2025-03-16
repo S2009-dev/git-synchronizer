@@ -1,3 +1,25 @@
-vendor
+# Ignore all files and directories
+*
+
+# Allow tracking of specific files
+!.gitignore
+!README.md
+!LICENSE
+!deployer.sh
+!git.example.com.conf
+!git.example.com-ssl.conf
+
+# Allow tracking of specific directories
+!.git/
+!.git/*
+!www/
+!www/*
+
+# Ignore dev dependencies
+composer.lock
+vendor/
+vendor/*
+
+# Ignore environment files
 .env
-brouillon.txt
+config.yml

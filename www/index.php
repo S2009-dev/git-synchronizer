@@ -1,6 +1,12 @@
 <?php
 require $_SERVER['DOCUMENT_ROOT'].'/vendor/autoload.php';
 
+use Symfony\Component\Yaml\Yaml;
+
+$filePath = $_SERVER['DOCUMENT_ROOT'].'/config.yml';
+$yamlContent = file_get_contents($filePath);
+$config = Yaml::parse($yamlContent);
+
 $dotenv = Dotenv\Dotenv::createImmutable($_SERVER['DOCUMENT_ROOT']);
 $dotenv->load();
 
@@ -35,15 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (verifySignature($secret, $signatureHeader, $payload)) {
         $data = json_decode($payload, true);
 
-        if (isset($data['commits']) && is_array($data['commits']) && count($data['commits']) > 0) {
-            $commit = $data['commits'][0];
-            $args = "";
+        if(isset($data['zen'])){
+            http_response_code(200);
+            echo "Ping received";
+        } elseif (isset($data['commits'])) {
+            $repo = $data['repository'];
+            $conf = $config[$repo['owner']['name']][$repo['name']]['commits'];
+            $source = $conf['source'];
+            $dest = $conf['dest'];
+            $cpdir = $conf['cpdir'];
+            $postcmd = $conf['postcmd'];
+            $args = "--source=$source --dest=$dest --cpdir=$cpdir";
 
-            if (isset($commit['url']) && strpos($commit['url'], $base_url.'<REPO_NAME>') === 0) {
-                $args = '--source="<source_folder>" --dest="<destination_folder>" --cpdir="<folder_in_source_to_copy_content>"';
+            if(isset($postcmd) && !empty($postcmd)){
+                $args = "$args --postcmd=$postcmd";
             }
 
-            $script_path = '/var/git_remote/deployer.sh';
+            $script_path = '/var/git_sync/deployer.sh';
             $command = "bash $script_path $args 2>&1";
 
             exec($command, $output, $return_var);
@@ -56,8 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo 'Success';
             }
         } else {
-            http_response_code(200);
-            echo "Ping";
+            http_response_code(400);
+            echo "Bad Request";
         }
     } else {
         http_response_code(403);
@@ -65,5 +79,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 } else {
     http_response_code(400);
-    echo "Bad Request";
+    echo "Bad Request Method";
 }

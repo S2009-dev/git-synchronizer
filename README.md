@@ -1,5 +1,10 @@
 # GIT Synchronizer
 
+![GitHub Release](https://img.shields.io/github/v/release/SoftLightGames/GIT-Synchronizer?link=https%3A%2F%2Fgithub.com%2FSoftLightGames%2FGIT-Synchronizer%2Freleases)
+![GitHub License](https://img.shields.io/github/license/SoftLightGames/GIT-Synchronizer)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/SoftLightGames/GIT-Synchronizer)
+![GitHub Repo stars](https://img.shields.io/github/stars/SoftLightGames/GIT-Synchronizer)
+
 Sync your GitHub with a VPS
 
 ## Index

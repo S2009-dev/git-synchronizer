@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Handle configuration not found
                 http_response_code(404);
                 echo "No configuration found for this repository";
+                exit();
             }
 
             $source = $conf['source'];

@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo "Bad Request";
         }
     } else {
-        http_response_code(403);
+        http_response_code(401);
         echo "Invalid Signature";
     }
 } else {

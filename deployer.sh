@@ -9,7 +9,7 @@ usage() {
 }
 
 # Verify args
-if [ $# -ne 4 ]; then
+if [ $# -ne 3 ] && [ $# -ne 4 ]; then
     usage
 fi
 

@@ -69,10 +69,10 @@ if [ ! -z "$postcmd" ]; then
     
     if [ "$postcmd" == "composer" ]; then
         cd "$dest" || { echo "Can't open $dest"; exit 1; }
-        composer install || { echo "Failed to execute composer install"; exit 1; }
+        /usr/local/bin/composer install || { echo "Failed to execute composer install"; exit 1; }
     elif [ "$postcmd" == "npm" ]; then
         cd "$dest" || { echo "Can't open $dest"; exit 1; }
-        npm install || { echo "Failed to execute npm install"; exit 1; }
+        /usr/local/bin/npm install || { echo "Failed to execute npm install"; exit 1; }
     else
         if [ -f "$postcmd" ]; then
             sh "$postcmd" || { echo "Failed to execute $postcmd"; exit 1; }

@@ -1,3 +1,5 @@
+ErrorDocument 403 https://github.com/SoftLightGames/GIT-Synchronizer
+
 Order Deny,Allow
 Deny from all
 

@@ -72,7 +72,7 @@ if [ ! -z "$postcmd" ]; then
         COMPOSER_HOME=/var/www/.composer /usr/local/bin/composer install || { echo "Failed to execute composer install"; exit 1; }
     elif [ "$postcmd" == "npm" ]; then
         cd "$dest" || { echo "Can't open $dest"; exit 1; }
-        /usr/local/bin/npm install || { echo "Failed to execute npm install"; exit 1; }
+        /usr/bin/npm install || { echo "Failed to execute npm install"; exit 1; }
     else
         if [ -f "$postcmd" ]; then
             sh "$postcmd" || { echo "Failed to execute $postcmd"; exit 1; }

@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conf = $config[$repo['owner']['name']][$repo['name']]['commits'];
 
             if(isset($data['release'])){
-                $conf = $config[$repo['owner']['name']][$repo['name']]['releases'];
+                $conf = $config[$repo['owner']['login']][$repo['name']]['releases'];
             }
 
             if(!isset($conf) || empty($conf)){

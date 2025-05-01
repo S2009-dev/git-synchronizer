@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Handle ping event
             http_response_code(200);
             echo "Ping received";
-        } elseif ((isset($data['commits']) && !empty($data['commits'])) || (isset($data['release']) && isset($data['action']) && $data['action'] == "published" )) {
+        } elseif ((isset($data['commits']) && !empty($data['commits'])) || (isset($data['release']) && isset($data['action']) && ($data['action'] == "published" || $data['action'] == "edited"))) {
             // Handle commit event
             $repo = $data['repository'];
             $conf = $config[$repo['owner']['name']][$repo['name']]['commits'];

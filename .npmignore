@@ -1,0 +1,12 @@
+/node_modules
+/archives
+/wiki
+/src
+
+/.vscode
+/.git
+
+.env
+
+tsconfig.json
+tsup.config.ts

@@ -1,25 +1,7 @@
-# Ignore all files and directories
-*
+/node_modules
+/archives
+/wiki
+/lib
+/.vscode
 
-# Allow tracking of specific files
-!.gitignore
-!README.md
-!LICENSE
-!deployer.sh
-!git.example.com.conf
-!git.example.com-ssl.conf
-
-# Allow tracking of specific directories
-!.git/
-!.git/*
-!www/
-!www/*
-
-# Ignore dev dependencies
-composer.lock
-vendor/
-vendor/*
-
-# Ignore environment files
 .env
-config.yml

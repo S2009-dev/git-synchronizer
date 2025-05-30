@@ -4,6 +4,7 @@
 /src
 
 /.vscode
+/.github
 /.git
 
 .env

@@ -1,8 +1,7 @@
 {
   "name": "git-synchronizer",
-  "version": "2.0.1",
+  "version": "2.0.0",
   "description": "Synchronize your GitHub repositories with a VPS",
-  "preferGlobal": true,
   "main": "./lib/index.js",
   "module": "./lib/index.mjs",
   "types": "./lib/index.d.ts",

@@ -39,10 +39,10 @@ export default {
             const headers = req.headers;
             const payload = req.body;
 
-            const existingUser: UserConf | undefined = configManager.get(`users.${payload.sender.login}`);
+            const existingUser: UserConf | undefined = configManager.get(`users.${payload.repository.owner.name}`);
             
             if(!existingUser) {
-                res.status(404).send(`User ${payload.sender.login} not found in server configuration`);
+                res.status(404).send(`User ${payload.repository.owner.name} not found in server configuration`);
                 return;
             }
 
@@ -59,15 +59,15 @@ export default {
             } else if(event === "push" || event === "release"){
                 console.log(`Received ${event} event for repository ${payload.repository.name} from GitHub`);
 
-                const repo: RepoConf | undefined = configManager.get(`users.${payload.sender.login}.repositories.${payload.repository.name}`);
+                const repo: RepoConf | undefined = configManager.get(`users.${payload.repository.owner.name}.repositories.${payload.repository.name}`);
                 if(!repo) {
-                    console.log(`Repository ${payload.sender.login}/${payload.repository.name} isn't handled by the server.`);
+                    console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
                     return;
                 }
 
                 const conf: RepoSyncConf | undefined = event === "release" ? repo.releases : repo.commits;
                 if(!conf) {
-                    console.error(`No configuration found for ${event} event for repository ${payload.sender.login}/${payload.repository.name}.`);
+                    console.error(`No configuration found for ${event} event for repository ${payload.repository.full_name}.`);
                     return;
                 }
 
@@ -86,7 +86,7 @@ export default {
         
                 exe.on("exit", (code: number) => {
                     if (code === 0) {
-                        console.log(`Successfully synced ${conf.folder} folder with ${payload.sender.login}/${payload.repository.name} repository !`);
+                        console.log(`Successfully synced ${conf.folder} folder with ${payload.repository.full_name} repository !`);
                     }
                 });
             } else {

@@ -58,8 +58,10 @@ export default {
                 console.log("Received ping event from GitHub");
             } else if(event === "push" || event === "release"){
                 console.log(`Received ${event} event for repository ${payload.repository.name} from GitHub`);
-
-                const repo: RepoConf | undefined = configManager.get(`users.${payload.repository.owner.name}.repositories.${payload.repository.name}`);
+            
+                const ownerName: string = payload.repository.owner.name;
+                const repoName: string = payload.repository.name;
+                const repo: RepoConf | undefined = configManager.get(`users.${ownerName}.repositories.${repoName.toLowerCase()}`);
                 if(!repo) {
                     console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
                     return;

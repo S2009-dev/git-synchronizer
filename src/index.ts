@@ -4,6 +4,8 @@ import registerCommands from "./utils/registerCommands";
 
 /**
  * Registers all commands and parse the program arguments with commander.
+ * 
+ * @remarks This the main function so there isn't any arg or return value.
  */
 async function main(): Promise<void> {
     const packageJson: Package = require("../package.json");

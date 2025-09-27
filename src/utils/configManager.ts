@@ -3,11 +3,11 @@ import yaml from 'js-yaml';
 
 /**
  * Configuration manager for the application.
+ * 
+ * @requires conf
+ * @requires js-yaml
+ * 
  * @returns Configuration manager.
- * @see Conf
- * @see yaml
- * @see https://www.npmjs.com/package/conf
- * @see https://www.npmjs.com/package/js-yaml
  */
 export default new Conf({
     projectName: 'fr.s2009.git',

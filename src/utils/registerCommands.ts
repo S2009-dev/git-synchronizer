@@ -4,10 +4,18 @@ import { CmdConf } from './types';
 import { Command } from 'commander';
 
 /**
- * Get the list of commands to register from the commands folder.
- * Add the action callback to each command.
+ * Get the list of commands to register from the commands folder and add callback to them.
+ * 
+ * @requires fs/promises
+ * @requires path
+ * @requires CmdConf
+ * @requires Command
+ * 
  * @returns Array of commands to register.
- * @see Command
+ * 
+ * @example ```typescript
+ * const registeredCommands: Command[] = await registerCommands();
+ * ```
  */
 export default async (): Promise<Command[]> => {
     const commandsFolder: string = path.join(__dirname, 'commands');

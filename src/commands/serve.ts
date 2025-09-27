@@ -7,19 +7,48 @@ import os from "os"
 import { ChildProcess, exec } from "child_process";
 
 /**
- * Command to run the synchronizer server.
- * @returns Command object and its callback function.
- * @see Command
- * @see express
- * @see configManager
- * @see verifySignature
+ * Command to run the synchronizer server
+ *  
+ * @returns Command object and its callback function
  */
 export default {
+    /**
+     * The command object
+     * 
+     * @requires commander
+     * 
+     * @name serve
+     * @description Run the synchronizer server
+     * 
+     * @argument -p / --port 
+     * @param [port] Port to run the server on (can also be set in the config)
+     * @default 3000
+     * 
+     * @returns "serve" command object
+     * 
+     * @remarks If the port argument is set, it will override the config's port
+     * 
+     * @example ```sh
+     *  git-synchronizer serve --port 1234
+     * ```
+     */
     cmd: new Command()
         .name("serve")
         .description("Run the synchronizer server")
         .option('-p, --port [port]', 'Port to run the server on (can also be set in the config)', parseInt),
         
+    /**
+     * Run an express server to listen for Github API events
+     * 
+     * @requires commander
+     * @requires ServeOptions
+     * @requires express
+     * 
+     * @param cmd The command object
+     * @param options The options passed to command
+     * 
+     * @returns "serve" command callback
+     */
     callback: async (cmd: Command, options: ServeOptions): Promise<void> => {
         const app: express.Application = express();
         const port: number = typeof options.port === 'number' && options.port > 0 ? options.port : configManager.get('server.port') || 3000;
@@ -27,6 +56,7 @@ export default {
 
         app.use(express.json())
 
+        // Redirect bad requests to the package page
         app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
             if (req.method !== 'POST') {
                 return res.redirect(redirectUrl);
@@ -35,6 +65,7 @@ export default {
             next();
         });
 
+        // Handle POST requests like Github API events
         app.post('/', (req: express.Request, res: express.Response): void => {
             const headers = req.headers;
             const payload = req.body;
@@ -96,6 +127,7 @@ export default {
             }
         });
 
+        // Run the express server
         app.listen(port, (): void => {
             console.log(`Synchronizer server is listening on port ${port} (Press CTRL + C to stop it).`);
         });

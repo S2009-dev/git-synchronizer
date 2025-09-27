@@ -8,15 +8,45 @@ import fs from "fs";
 import path from "path";
 
 /**
- * Command to initialize a synchronization with a GitHub repository in a folder.
- * @returns Command object and its callback.
- * @see Command
- * @see Argument
- * @see configManager
- * @see UserConf
- * @see RepoSyncConf
+ * Command to initialize a synchronization with a GitHub repository in a folder
+ * 
+ * @returns Command object and its callback function
  */
 export default {
+    /**
+     * The command object
+     * 
+     * @requires commander
+     * 
+     * @name init
+     * @description Sync a folder with a GitHub repository
+     * 
+     * @param username GitHub account username to sync with
+     * @param repository GitHub repository name to sync with
+     * 
+     * @param branch Branch to sync with
+     * @default main
+     * 
+     * @param path Path to the folder to sync
+     * @default current directory
+     * 
+     * @param user OS user who will run processes
+     * @default current user who runs the command
+     * 
+     * @param type When to sync
+     * @default commit
+     * 
+     * @param post-install Run a command after syncing
+     * @default none
+     * 
+     * @returns "init" command object
+     * 
+     * @remarks If the port argument is set, it will override the config's port
+     * 
+     * @example ```sh
+     *  git-synchronizer init JohnDoe cool-repo master "/home/jd/cool" debian release "npm install"
+     * ```
+     */
     cmd: new Command()
         .name("init")
         .description("Sync a folder with a GitHub repository")
@@ -28,6 +58,17 @@ export default {
         .addArgument(new Argument('[type]', 'When to sync').choices(['commit', 'release']).default('commit'))
         .addArgument(new Argument('[post-install]', 'Run a command after syncing').choices(['npm install', 'composer install', 'custom', 'none']).default('none')),
 
+    /**
+     * Init a synchronization between a repository and a local directory
+     * 
+     * @requires commander
+     * @requires configManager
+     * @requires child_process
+     * 
+     * @param cmd The command object
+     * 
+     * @returns "init" command callback
+     */
     callback: async (cmd: Command): Promise<void> => {
         const config: UserConf = {
             repositories: {
@@ -51,6 +92,7 @@ export default {
             type: cmd.args[5]
         };
 
+        // Check if the "username" argument is set
         if(!cmd.args[0]) {
             if(!configManager.get("users")) {
                 console.error("No GitHub accounts found in configuration\nPlease add one using the config command (git-synchronizer config --add-user)");
@@ -93,6 +135,7 @@ export default {
             sync.token = existingUser.token;
         }
         
+        // Check if "repository" argument is set
         if(!cmd.args[1]) {
             const repoPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
@@ -132,6 +175,7 @@ export default {
             sync.url = `https://${sync.token}@github.com/${sync.username}/${sync.name}.git`;
         }
 
+        // Check if "branch" argument is set
         if(!cmd.args[2]) {
             const branchPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
@@ -164,6 +208,7 @@ export default {
             return process.exit(1);
         }
 
+        // Check if "path" argument is set
         if(!cmd.args[3]) {
             const pathPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
@@ -182,6 +227,7 @@ export default {
             repoSync.folder = pathPrompt.answer || process.cwd();
         }
 
+        // Check if "user" argument is set
         if(!cmd.args[4]) {
             if(os.platform() === "win32") {
                 repoSync.user = os.userInfo().username;
@@ -205,6 +251,7 @@ export default {
             repoSync.user = userPrompt.answer || os.userInfo().username;
         }
 
+        // Check if "type" argument is set
         if(!cmd.args[5]) {
             const typePrompt: { answer: string } = await inquirer.prompt({
                 type: "list",
@@ -225,6 +272,7 @@ export default {
             sync.type = typePrompt.answer;
         }
 
+        // Check if "post-install" argument is set
         if(!cmd.args[6]) {
             const cmdPrompt: { answer: string } = await inquirer.prompt({
                 type: "list",
@@ -311,6 +359,7 @@ export default {
             }
         });
 
+        // Handle child process exit
         exe.on("exit", (code: number) => {
             if (code === 0) {
                 console.log("Sync folder configured successfully.");

@@ -8,16 +8,45 @@ import os from "os";
 
 /**
  * Command to configure the Synchronizer.
- * @returns Command object and callback function.
- * @see Command
- * @see ConfigOptions
- * @see RepoConf
- * @see UserConf
- * @see inquirer
- * @see configManager
- * @see spawn
+ * 
+ * @returns Command object and its callback function
  */
 export default {
+    /**
+     * The command object
+     * 
+     * @requires commander
+     * 
+     * @name config
+     * @description Configure the Synchronizer
+     * 
+     * @argument -o / --open 
+     * @description Open the configuration file
+     * 
+     * @argument -s / --server
+     * @param port Set the server port (number)
+     * @default 3000
+     * 
+     * @argument --add-user
+     * @param userinfos Add a new GitHub user to the configuration ([username] [token] [secret])
+     * 
+     * @argument --remove-user
+     * @param username Remove a GitHub user from the configuration
+     * 
+     * @argument --remove-sync
+     * @param syncinfos Remove a synced repository from the configuration ([username] [repo-name])
+     * 
+     * @returns "config" command object
+     * 
+     * @remarks If the port argument is set, it will override the config's port
+     * 
+     * @example ```sh
+     *  git-synchronizer config --open
+     * ```
+     * @example ```sh
+     *  git-synchronizer config --remove-user JohnDoe
+     * ```
+     */
     cmd: new Command()
         .name("config")
         .description("Configure the Synchronizer")
@@ -27,6 +56,18 @@ export default {
         .option("--remove-user [username]", "Remove a GitHub user from the configuration")
         .option("--remove-sync [syncinfos...]", "Remove a synced repository from the configuration ([username] [repo-name])"),
 
+    /**
+     * Edit the git-synchronizer configuration file
+     * 
+     * @requires commander
+     * @requires ConfigOptions
+     * @requires child_process
+     * 
+     * @param cmd The command object
+     * @param options The options passed to command
+     * 
+     * @returns "config" command callback
+     */
     callback: async (cmd: Command, options: ConfigOptions): Promise<void> => {
         if(options.open){
             if(os.platform() === "win32") {

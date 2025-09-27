@@ -1,5 +1,5 @@
 /**
- * The package.json file.
+ * Important informations of the package.json file.
  */
 export type Package = {
     name: string;
@@ -10,6 +10,7 @@ export type Package = {
 
 /**
  * Structure of a command file.
+ * @requires commander
  */
 export type CmdConf = {
     cmd: import('commander').Command;
@@ -18,7 +19,6 @@ export type CmdConf = {
 
 /**
  * Structure of the server configuration in the config file.
- * @see Config
  */
 export type ServerConf = {
     port: number;
@@ -26,9 +26,6 @@ export type ServerConf = {
 
 /**
  * Structure of a repository sync configuration in the config file.
- * @see Config
- * @see RepoConf
- * @see UserConf
  */
 export type RepoSyncConf = {
     folder?: string; 
@@ -37,10 +34,8 @@ export type RepoSyncConf = {
 }
 
 /**
- * Structure of a repository configuration in the config file.
- * @see Config
- * @see RepoSyncConf
- * @see UserConf
+ * Structure of a repository actions configuration in the config file.
+ * @requires RepoSyncConf
  */
 export type RepoConf = {
     commits: RepoSyncConf;
@@ -49,8 +44,7 @@ export type RepoConf = {
 
 /**
  * Structure of a user configuration in the config file.
- * @see Config
- * @see RepoConf
+ * @requires RepoConf
  */
 export type UserConf = {
     token?: string;
@@ -62,8 +56,8 @@ export type UserConf = {
 
 /**
  * Structure of the config file.
- * @see ServerConf
- * @see UserConf
+ * @requires ServerConf
+ * @requires UserConf
  */
 export type Config = {
     server: ServerConf;
@@ -104,7 +98,6 @@ export type SyncConf = {
 
 /**
  * Structure of the algorithm used to verify the signature.
- * @see verifySignature
  * @see https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
  */
 export type VerifAlgo = {

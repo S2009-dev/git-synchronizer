@@ -4,12 +4,14 @@ let encoder = new TextEncoder();
 
 /**
  * Converts a hexadecimal string to a byte array.
+ * 
  * @param hex The hexadecimal string to convert.
+ * 
  * @returns The byte array.
  */
-function hexToBytes(hex: string): Uint8Array {
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
     let len: number = hex.length / 2;
-    let bytes: Uint8Array = new Uint8Array(len);
+    let bytes: Uint8Array<ArrayBuffer> = new Uint8Array(len);
 
     let index: number = 0;
     for (let i = 0; i < hex.length; i += 2) {
@@ -24,11 +26,18 @@ function hexToBytes(hex: string): Uint8Array {
 
 /**
  * Verifies the signature of a payload.
+ * 
  * @param secret The secret used to sign the payload.
  * @param header The header containing the signature.
  * @param payload The payload to verify.
+ * 
  * @returns Whether the signature is valid.
+ * 
  * @see https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+ * 
+ * @example ```typescript
+ *  verifySignature(process.env.SECRET, headers['x-hub-signature-256'] as string, req.body)
+ * ```
  */
 export default async (secret: string, header: string, payload: string): Promise<boolean> => {
     let parts: string[] = header.split("=");
@@ -36,7 +45,7 @@ export default async (secret: string, header: string, payload: string): Promise<
 
     let algorithm: VerifAlgo = { name: "HMAC", hash: { name: 'SHA-256' } };
 
-    let keyBytes: Uint8Array = encoder.encode(secret);
+    let keyBytes: Uint8Array<ArrayBuffer> = encoder.encode(secret);
     let extractable: boolean = false;
     let key: CryptoKey = await crypto.subtle.importKey(
         "raw",
@@ -46,8 +55,8 @@ export default async (secret: string, header: string, payload: string): Promise<
         [ "sign", "verify" ],
     );
 
-    let sigBytes: Uint8Array = hexToBytes(sigHex);
-    let dataBytes: Uint8Array = encoder.encode(payload);
+    let sigBytes: Uint8Array<ArrayBuffer> = hexToBytes(sigHex);
+    let dataBytes: Uint8Array<ArrayBuffer> = encoder.encode(payload);
     let equal: boolean = await crypto.subtle.verify(
         algorithm.name,
         key,

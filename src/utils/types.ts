@@ -30,7 +30,7 @@ export type ServerConf = {
 export type RepoSyncConf = {
     folder?: string
     dl_filename?: string
-    user?: string
+    os_user?: string
     postcmd?: string
 }
 
@@ -39,9 +39,9 @@ export type RepoSyncConf = {
  * @requires RepoSyncConf
  */
 export type RepoConf = {
-    commits: RepoSyncConf
+    push: RepoSyncConf
     workflow_run: RepoSyncConf
-    releases: RepoSyncConf
+    release: RepoSyncConf
 }
 
 /**
@@ -64,7 +64,7 @@ export type UserConf = {
 export type Config = {
     server: ServerConf
     users: {
-        [username: string]: UserConf
+        [git_user: string]: UserConf
     }
 }
 
@@ -92,10 +92,10 @@ export type ServeOptions = {
 export type SyncConf = {
     url?: string
     branch: string
-    name: string
-    username: string
+    repository: string
+    git_user: string
     token?: string
-    type: string
+    action: keyof RepoConf
 }
 
 /**

@@ -100,7 +100,7 @@ export default {
                 if(!repo) return console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
 
                 if(event === "push"){
-                    conf = repo.commits;
+                    conf = repo.push;
                     console.log(`Received ${event} event for repository ${payload.repository.name} from GitHub`);
                 } else if(event === "workflow_run") {
                     if(payload.action === "completed"){
@@ -111,7 +111,7 @@ export default {
                     }
                 } else if(event === "release") {
                     if(payload.action === "released"){
-                        conf = repo.releases;
+                        conf = repo.release;
                         console.log(`Received ${event} event with action ${payload.action} for repository ${payload.repository.name} from GitHub`);
                     } else {
                         return console.log(`Received ${event} event ${payload.action} from GitHub (not handled)`);
@@ -120,7 +120,7 @@ export default {
 
                 if(!conf) return console.error(`No configuration found for ${event} event for repository ${payload.repository.full_name}.`);
                 
-                const commandPrefix: string = os.platform() === "win32" ? "" : `sudo -u ${conf.user} `;
+                const commandPrefix: string = os.platform() === "win32" ? "" : `sudo -u ${conf.os_user} `;
                 const postCommand: string = conf.postcmd === "none" ? "" : ` && ${commandPrefix}${conf.postcmd}`;
                 let command: string = "";
 
@@ -153,7 +153,7 @@ export default {
                         const buffer = await downloadResponse.buffer();
 
                         fs.writeFileSync(path.join(conf.folder as string, `artifact-${artifact.id}.zip`), buffer);
-                        command = `cd ${conf.folder} && unzip artifact-${artifact.id}.zip && rm artifact-${artifact.id}.zip && chown -R ${conf.user}:${conf.user} ${conf.folder}`
+                        command = `cd ${conf.folder} && unzip artifact-${artifact.id}.zip && rm artifact-${artifact.id}.zip && chown -R ${conf.os_user}:${conf.os_user} ${conf.folder}`
                     })
                     .catch(err => console.error('An error occured while downloading artifact :', err));
                 } else if (event === "release") {
@@ -172,7 +172,7 @@ export default {
                     .then(res => res.buffer())
                     .then(async (data) => {
                         fs.writeFileSync(path.join(conf.folder as string, `asset-${asset.id}.zip`), data);
-                        command = `cd ${conf.folder} && unzip asset-${asset.id}.zip && rm asset-${asset.id}.zip && chown -R ${conf.user}:${conf.user} ${conf.folder}`;
+                        command = `cd ${conf.folder} && unzip asset-${asset.id}.zip && rm asset-${asset.id}.zip && chown -R ${conf.os_user}:${conf.os_user} ${conf.folder}`;
                     })
                     .catch(err => console.error('An error occured while downloading asset :', err));
                 }

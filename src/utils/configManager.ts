@@ -32,20 +32,20 @@ export default new Conf({
                     type: 'object',
                     propertyNames: { type: 'string' },
                     properties: {
-                        commits: { 
+                        push: { 
                             type: 'object',
                             properties: {
                                 folder: { type: 'string' },
-                                user: { type: 'string' },
+                                os_user: { type: 'string' },
                                 postcmd: { type: 'string' },
                             }
                         },
-                        releases: { 
+                        release: { 
                             type: 'object',
                             properties: {
                                 folder: { type: 'string' },
                                 dl_filename: { type: 'string' },
-                                user: { type: 'string' },
+                                os_user: { type: 'string' },
                                 postcmd: { type: 'string' },
                             }
                         },
@@ -54,7 +54,7 @@ export default new Conf({
                             properties: {
                                 folder: { type: 'string' },
                                 dl_filename: { type: 'string' },
-                                user: { type: 'string' },
+                                os_user: { type: 'string' },
                                 postcmd: { type: 'string' },
                             }
                         }

@@ -44,6 +44,16 @@ export default new Conf({
                             type: 'object',
                             properties: {
                                 folder: { type: 'string' },
+                                dl_filename: { type: 'string' },
+                                user: { type: 'string' },
+                                postcmd: { type: 'string' },
+                            }
+                        },
+                        workflow_run: { 
+                            type: 'object',
+                            properties: {
+                                folder: { type: 'string' },
+                                dl_filename: { type: 'string' },
                                 user: { type: 'string' },
                                 postcmd: { type: 'string' },
                             }

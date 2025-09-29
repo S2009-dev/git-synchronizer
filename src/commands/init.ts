@@ -74,7 +74,8 @@ export default {
             repositories: {
                 [cmd.args[1] ?? "unknown"]: {
                     commits: {},
-                    releases: {}
+                    releases: {},
+                    workflow_run: {}
                 }
             }
         };

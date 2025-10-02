@@ -50,13 +50,14 @@ export default {
     cmd: new Command()
         .name("init")
         .description("Sync a folder with a GitHub repository")
-        .argument('[username]', 'GitHub account username to sync with')
+        .argument('[git_user]', 'GitHub account username that owns the "repository" to sync with')
         .argument('[repository]', 'GitHub repository name to sync with')
         .argument('[branch]', 'Branch to sync with', 'main')
-        .argument('[path]', 'Path to the folder to sync', process.cwd())
-        .argument('[user]', 'OS user who will run processes', os.userInfo().username)
-        .addArgument(new Argument('[type]', 'When to sync').choices(['commit', 'release']).default('commit'))
-        .addArgument(new Argument('[post-install]', 'Run a command after syncing').choices(['npm install', 'composer install', 'custom', 'none']).default('none')),
+        .argument('[folder]', 'Path to the folder to sync with', process.cwd())
+        .argument('[os_user]', 'Name of the OS user who will have the permissions in the "folder" and who will perform the "post-install" command', os.userInfo().username)
+        .argument('[dl_filename]', 'Name of the asset/artifact file to download (in case of the action isn\'t set to "push")')
+        .addArgument(new Argument('[action]', 'Action that trigger sync').choices(['push', 'workflow_run', 'release']).default('push'))
+        .addArgument(new Argument('[post-install]', 'Run a command after syncing (example: "sh myfile.sh" if you choose "custom")').choices(['npm install', 'composer install', 'custom', 'none']).default('none')),
 
     /**
      * Init a synchronization between a repository and a local directory
@@ -73,26 +74,28 @@ export default {
         const config: UserConf = {
             repositories: {
                 [cmd.args[1] ?? "unknown"]: {
-                    commits: {},
-                    releases: {}
+                    push: {},
+                    release: {},
+                    workflow_run: {}
                 }
             }
         };
 
         const repoSync: RepoSyncConf = {
             folder: cmd.args[3],
-            user: cmd.args[4],
-            postcmd: cmd.args[6]
+            dl_filename: cmd.args[5],
+            os_user: cmd.args[4],
+            postcmd: cmd.args[7]
         }
 
         const sync: SyncConf = {
             branch: cmd.args[2],
-            name: cmd.args[1],
-            username: cmd.args[0],
-            type: cmd.args[5]
+            repository: cmd.args[1],
+            git_user: cmd.args[0],
+            action: cmd.args[6] as keyof RepoConf
         };
 
-        // Check if the "username" argument is set
+        // Check if the "git_user" argument is set or ask for it
         if(!cmd.args[0]) {
             if(!configManager.get("users")) {
                 console.error("No GitHub accounts found in configuration\nPlease add one using the config command (git-synchronizer config --add-user)");
@@ -105,13 +108,13 @@ export default {
                 console.error("No GitHub accounts found in configuration\nPlease add one using the config command (git-synchronizer config --add-user)");
                 return process.exit(1);
             } else if(choices.length === 1) {
-                console.log(`Using the only GitHub account: ${choices[0]}`);
-                sync.username = choices[0];
+                console.log(`Using the only one GitHub account existing in configuration: ${choices[0]}`);
+                sync.git_user = choices[0];
             } else {
                 const namePrompt: { answer: string } = await inquirer.prompt({
                     type: "list",
                     name: "answer",
-                    message: "Select your GitHub account:",
+                    message: "Select the GitHub account that owns the repository you want to sync with:",
                     choices: choices,
                 }).catch((err: Error) => {
                     if (err.message.includes('User force closed the prompt with SIGINT')) {
@@ -123,19 +126,19 @@ export default {
                     }
                 });
 
-                sync.username = namePrompt.answer;
+                sync.git_user = namePrompt.answer;
             }
         }
 
-        const existingUser: UserConf | undefined = configManager.get(`users.${sync.username}`);
-        if(!existingUser) {
-            console.log(`User ${sync.username} not found in configuration\nPlease add it using the config command (git-synchronizer config --add-user)`);
+        const existingUser: UserConf | undefined = configManager.get(`users.${sync.git_user}`);
+        if(!existingUser || !existingUser.token) {
+            console.log(`Github account "${sync.git_user}" not found in configuration\nPlease add it using the config command (git-synchronizer config --add-user)`);
             return process.exit(1);
         } else {
             sync.token = existingUser.token;
         }
         
-        // Check if "repository" argument is set
+        // Check if "repository" argument is set or ask for it
         if(!cmd.args[1]) {
             const repoPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
@@ -152,30 +155,30 @@ export default {
             });
 
            
-           sync.name = repoPrompt.answer.toLowerCase();
-           config.repositories[sync.name] = config.repositories['unknown'];
+           sync.repository = repoPrompt.answer;
+           config.repositories[sync.repository] = config.repositories['unknown'];
 
            delete(config.repositories['unknown']);
         }
 
-        const repoUrl = `https://api.github.com/repos/${sync.username}/${sync.name}`
+        const repoUrl = `https://api.github.com/repos/${sync.git_user}/${sync.repository}`
         const fetchRepo: Response = await fetch(repoUrl, {
             headers: {
                 'Authorization': `token ${sync.token}`
             }
         }).catch((err: Error) => {
-            console.error(err.message);
+            console.error(`An error occured while fetching the repo: ${err.message}`);
             return process.exit(1);
         });
 
         if (!fetchRepo.ok) {
-            console.error(`The GitHub account ${sync.username} does not have a repository named ${sync.name}.`);
+            console.error(`The GitHub account "${sync.git_user}" does not have a repository named "${sync.repository}".`);
             return process.exit(1);
         } else {
-            sync.url = `https://${sync.token}@github.com/${sync.username}/${sync.name}.git`;
+            sync.url = `https://${sync.token}@github.com/${sync.git_user}/${sync.repository}.git`;
         }
 
-        // Check if "branch" argument is set
+        // Check if "branch" argument is set or ask for it
         if(!cmd.args[2]) {
             const branchPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
@@ -199,16 +202,16 @@ export default {
                 'Authorization': `token ${sync.token}`
             }
         }).catch((err: Error) => {
-            console.error(err.message);
+            console.error(`An error occured while fetching the branch: ${err.message}`);
             return process.exit(1);
         });
 
         if (!fetchBranch.ok) {
-            console.error(`The GitHub repository ${sync.username}/${sync.name} does not have a branch named ${sync.branch}.`);
+            console.error(`The GitHub repository "${sync.git_user}/${sync.repository}" does not have a branch named "${sync.branch}".`);
             return process.exit(1);
         }
 
-        // Check if "path" argument is set
+        // Check if "folder" argument is set or ask for it
         if(!cmd.args[3]) {
             const pathPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
@@ -227,17 +230,22 @@ export default {
             repoSync.folder = pathPrompt.answer || process.cwd();
         }
 
-        // Check if "user" argument is set
+        if(!fs.existsSync(repoSync.folder as string)) {
+            console.error(`The folder was not found at "${repoSync.folder}".`);
+            return process.exit(1);
+        }
+
+        // Check if "os_user" argument is set or ask for it
         if(!cmd.args[4]) {
             if(os.platform() === "win32") {
-                repoSync.user = os.userInfo().username;
+                repoSync.os_user = os.userInfo().username;
                 return;
             }
 
             const userPrompt: { answer: string } = await inquirer.prompt({
                 type: "input",
                 name: "answer",
-                message: `Enter the name of the OS user to run processes as (default: ${os.userInfo().username}):`,
+                message: `Enter the name of the OS user who will have the permissions in the "folder" and who will perform the "post-install" command (default: ${os.userInfo().username}):`,
             }).catch((err: Error) => {
                 if (err.message.includes('User force closed the prompt with SIGINT')) {
                     console.log('Operation canceled');
@@ -248,17 +256,17 @@ export default {
                 }
             });
 
-            repoSync.user = userPrompt.answer || os.userInfo().username;
+            repoSync.os_user = userPrompt.answer || os.userInfo().username;
         }
 
-        // Check if "type" argument is set
-        if(!cmd.args[5]) {
-            const typePrompt: { answer: string } = await inquirer.prompt({
+        // Check if "action" argument is set or ask for it
+        if(!cmd.args[6]) {
+            const typePrompt: { answer: keyof RepoConf } = await inquirer.prompt({
                 type: "list",
                 name: "answer",
-                message: "Choose when sync should be triggered:",
-                choices: ["commits", "releases"],
-                default: "commits",
+                message: "Choose the action that should trigger a sync:",
+                choices: ["push", "workflow_run", "release"],
+                default: "push",
             }).catch((err: Error) => {
                 if (err.message.includes('User force closed the prompt with SIGINT')) {
                     console.log('Operation canceled');
@@ -269,15 +277,15 @@ export default {
                 }
             });
 
-            sync.type = typePrompt.answer;
+            sync.action = typePrompt.answer;
         }
 
-        // Check if "post-install" argument is set
+        // Check if "post-install" argument is set or ask for it
         if(!cmd.args[6]) {
             const cmdPrompt: { answer: string } = await inquirer.prompt({
                 type: "list",
                 name: "answer",
-                message: "Choose the command to execute after sync:",
+                message: "Choose a command to execute after sync (example: 'sh myfile.sh' if you choose 'custom'):",
                 choices: ["npm install", "composer install", "custom", "none"],
                 default: "none",
             }).catch((err: Error) => {
@@ -294,7 +302,7 @@ export default {
                 const customCmdPrompt: { answer: string } = await inquirer.prompt({
                     type: "input",
                     name: "answer",
-                    message: "Enter the custom command to execute:",
+                    message: "Enter the custom command to execute (example: 'sh myfile.sh'):",
                 }).catch((err: Error) => {
                     if (err.message.includes('User force closed the prompt with SIGINT')) {
                         console.log('Operation canceled');
@@ -311,42 +319,50 @@ export default {
             }
         }
 
-        console.log("Configuring sync folder, please wait...");
+        console.log("Configuring the sync folder, please wait...");
 
-        const existingRepo: RepoConf | undefined = configManager.get(`users.${sync.username}.repositories.${sync.name}`);
+        const existingRepo: RepoConf | undefined = configManager.get(`users.${sync.git_user}.repositories.${sync.repository}`);
 
         if(!existingRepo){
-            configManager.set(`users.${sync.username}.repositories.${sync.name}`, config.repositories[sync.name]);
+            configManager.set(`users.${sync.git_user}.repositories.${sync.repository}`, config.repositories[sync.repository]);
         }
 
-        if (sync.type === "commits") {
-            config.repositories[sync.name].commits = repoSync;
-            configManager.set(`users.${sync.username}.repositories.${sync.name}.commits`, config.repositories[sync.name].commits);
-
-            if(configManager.get(`users.${sync.username}.repositories.${sync.name}.releases`) && configManager.get(`users.${sync.username}.repositories.${sync.name}.releases.folder`) === repoSync.folder){
-                console.log("Sync folder configured successfully.");
-                return process.exit(0);
-            }
-        } else {
-            config.repositories[sync.name].releases = repoSync;
-            configManager.set(`users.${sync.username}.repositories.${sync.name}.releases`, config.repositories[sync.name].releases);
-
-            
-            if(configManager.get(`users.${sync.username}.repositories.${sync.name}.commits`) && configManager.get(`users.${sync.username}.repositories.${sync.name}.commits.folder`) === repoSync.folder){
-                console.log("Sync folder configured successfully.");
-                return process.exit(0);
-            }
+        switch (sync.action) {
+            case "push":
+                config.repositories[sync.repository].push = repoSync;
+                configManager.set(`users.${sync.git_user}.repositories.${sync.repository}.push`, config.repositories[sync.repository].push);
+                break;
+            case "workflow_run":
+                config.repositories[sync.repository].workflow_run = repoSync;
+                configManager.set(`users.${sync.git_user}.repositories.${sync.repository}.workflow_run`, config.repositories[sync.repository].workflow_run);
+                break;
+            case "release":
+                config.repositories[sync.repository].release = repoSync;
+                configManager.set(`users.${sync.git_user}.repositories.${sync.repository}.release`, config.repositories[sync.repository].release);
+                break;
+            default:
+                break;
+        }
+        
+        if(configManager.get(`users.${sync.git_user}.repositories.${sync.repository}.${sync.action}`) && configManager.get(`users.${sync.git_user}.repositories.${sync.repository}.${sync.action}.folder`) === repoSync.folder){
+            console.log("Sync folder configured successfully.");
+            return process.exit(0);
         }
 
-        if (fs.existsSync(path.join(repoSync.folder || "", ".git"))) {
+        if (fs.existsSync(path.join(repoSync.folder as string, ".git"))) {
             console.error(`The folder ${repoSync.folder} is already synced with a git repository.`);
-            configManager.delete(`users.${sync.username}.repositories.${sync.name}.${sync.type}`);
+            configManager.delete(`users.${sync.git_user}.repositories.${sync.repository}.${sync.action}`);
             return process.exit(1);
         }
 
-        const commandPrefix: string = os.platform() === "win32" ? "" : `sudo -u ${repoSync.user} `;
-        const chownFolder: string = os.platform() === "win32" ? "" : `chown -R ${repoSync.user}:${repoSync.user} ${repoSync.folder} && `;
-        const command: string = `${chownFolder}cd ${repoSync.folder} && ${commandPrefix}git init -b ${sync.branch} && ${commandPrefix}git remote add origin ${sync.url} && ${commandPrefix}git pull origin ${sync.branch} && ${commandPrefix}git branch --set-upstream-to=origin/${sync.branch} ${sync.branch} &&${commandPrefix}git pull`;
+        const commandPrefix: string = os.platform() === "win32" ? "" : `sudo -u ${repoSync.os_user} `;
+        const chownFolder: string = os.platform() === "win32" ? "" : `chown -R ${repoSync.os_user}:${repoSync.os_user} ${repoSync.folder} && `;
+        let command: string = `${chownFolder}cd ${repoSync.folder}`;
+
+        if(sync.action === "push") {
+            command = `${command} && ${commandPrefix}git init -b ${sync.branch} && ${commandPrefix}git remote add origin ${sync.url} && ${commandPrefix}git pull origin ${sync.branch} && ${commandPrefix}git branch --set-upstream-to=origin/${sync.branch} ${sync.branch} &&${commandPrefix}git pull`;
+        }
+
         const exe: ChildProcess = exec(command, (error, stdout, stderr): void => {
             if (error) {
                 console.error(error.message);
@@ -364,7 +380,7 @@ export default {
             if (code === 0) {
                 console.log("Sync folder configured successfully.");
             } else {
-                configManager.delete(`users.${sync.username}.repositories.${sync.name}.${sync.type}`);
+                configManager.delete(`users.${sync.git_user}.repositories.${sync.repository}.${sync.action}`);
             }
         }); 
     }

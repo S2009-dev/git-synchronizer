@@ -3,8 +3,11 @@ import express from "express";
 import { RepoConf, RepoSyncConf, ServeOptions, UserConf } from "../utils/types";
 import configManager from "../utils/configManager";
 import verifySignature from "../utils/verifySignature";
-import os from "os"
 import { ChildProcess, exec } from "child_process";
+import fetch from "node-fetch"
+import path from "path"
+import fs from "fs"
+import os from "os"
 
 /**
  * Command to run the synchronizer server
@@ -49,7 +52,7 @@ export default {
      * 
      * @returns "serve" command callback
      */
-    callback: async (cmd: Command, options: ServeOptions): Promise<void> => {
+    callback: async (_cmd: Command, options: ServeOptions): Promise<void> => {
         const app: express.Application = express();
         const port: number = typeof options.port === 'number' && options.port > 0 ? options.port : configManager.get('server.port') || 3000;
         const redirectUrl: string = "https://npmjs.com/package/git-synchronizer";
@@ -70,10 +73,10 @@ export default {
             const headers = req.headers;
             const payload = req.body;
 
-            const existingUser: UserConf | undefined = configManager.get(`users.${payload.repository.owner.name}`);
+            const existingUser: UserConf | undefined = configManager.get(`users.${payload.repository.owner.login}`);
             
             if(!existingUser) {
-                res.status(404).send(`User ${payload.repository.owner.name} not found in server configuration`);
+                res.status(404).send(`User ${payload.repository.owner.login} not found in server configuration`);
                 return;
             }
 
@@ -84,29 +87,98 @@ export default {
 
             res.status(202).send('Accepted');
 
+            // Check if the event is supported by the git-synchronizer (https://docs.github.com/en/webhooks/webhook-events-and-payloads)
             const event: string | undefined = headers["x-github-event"] as string;
             if(event === "ping"){
                 console.log("Received ping event from GitHub");
-            } else if(event === "push" || event === "release"){
-                console.log(`Received ${event} event for repository ${payload.repository.name} from GitHub`);
-            
-                const ownerName: string = payload.repository.owner.name;
+            } else if(event === "push" || event === "workflow_run" || event === "release"){
+                const ownerName: string = payload.repository.owner.login;
                 const repoName: string = payload.repository.name;
                 const repo: RepoConf | undefined = configManager.get(`users.${ownerName}.repositories.${repoName.toLowerCase()}`);
-                if(!repo) {
-                    console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
-                    return;
+                let conf: RepoSyncConf | undefined;
+                
+                if(!repo) return console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
+
+                if(event === "push"){
+                    conf = repo.push;
+                    console.log(`Received ${event} event for repository ${payload.repository.name} from GitHub`);
+                } else if(event === "workflow_run") {
+                    if(payload.action === "completed"){
+                        conf = repo.workflow_run;
+                        console.log(`Received ${event} event with action ${payload.action} for repository ${payload.repository.name} from GitHub`);
+                    } else {
+                        return console.log(`Received ${event} event ${payload.action} from GitHub (not handled)`);
+                    }
+                } else if(event === "release") {
+                    if(payload.action === "released"){
+                        conf = repo.release;
+                        console.log(`Received ${event} event with action ${payload.action} for repository ${payload.repository.name} from GitHub`);
+                    } else {
+                        return console.log(`Received ${event} event ${payload.action} from GitHub (not handled)`);
+                    }
                 }
 
-                const conf: RepoSyncConf | undefined = event === "release" ? repo.releases : repo.commits;
-                if(!conf) {
-                    console.error(`No configuration found for ${event} event for repository ${payload.repository.full_name}.`);
-                    return;
-                }
-
-                const commandPrefix: string = os.platform() === "win32" ? "" : `sudo -u ${conf.user} `;
+                if(!conf) return console.error(`No configuration found for ${event} event for repository ${payload.repository.full_name}.`);
+                
+                const commandPrefix: string = os.platform() === "win32" ? "" : `sudo -u ${conf.os_user} `;
                 const postCommand: string = conf.postcmd === "none" ? "" : ` && ${commandPrefix}${conf.postcmd}`;
-                const command: string = `cd ${conf.folder} && ${commandPrefix}git pull${postCommand}`;
+                let command: string = "";
+
+                if(event === "push"){
+                    command = `cd ${conf.folder} && ${commandPrefix}git pull${postCommand}`;
+                } else if (event === "workflow_run") {
+                    fetch(payload.workflow_run.artifacts_url, {
+                        headers: {
+                            'Authorization': `Bearer ${existingUser.token}`,
+                            'Accept': 'application/vnd.github+json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(async (data) => {
+                        const artifact = data.artifacts.find(
+                            (a: { name: string }) => a.name === conf.dl_filename
+                        );
+
+                        if (!artifact) {
+                            throw new Error(`Artifact with name "${conf.dl_filename}" not found.`);
+                        }
+
+                        const downloadResponse: fetch.Response = await fetch(artifact.archive_download_url, {
+                            headers: {
+                            'Authorization': `Bearer ${existingUser.token}`,
+                            'Accept': 'application/vnd.github+json'
+                            }
+                        });
+
+                        const buffer = await downloadResponse.buffer();
+
+                        fs.writeFileSync(path.join(conf.folder as string, `artifact-${artifact.id}.zip`), buffer);
+                        command = `cd ${conf.folder} && unzip artifact-${artifact.id}.zip && rm artifact-${artifact.id}.zip && chown -R ${conf.os_user}:${conf.os_user} ${conf.folder}`
+                    })
+                    .catch(err => console.error('An error occured while downloading artifact :', err));
+                } else if (event === "release") {
+                    const asset = payload.release.assets.find(
+                        (a: { name: string }) => a.name === conf.dl_filename
+                    );
+
+                    if (!asset) return console.log(`Asset with name "${conf.dl_filename}" not found.`);
+
+                    fetch(asset.browser_download_url, {
+                        headers: {
+                        'Authorization': `Bearer ${existingUser.token}`,
+                        'Accept': 'application/vnd.github+json'
+                        }
+                    })
+                    .then(res => res.buffer())
+                    .then(async (data) => {
+                        fs.writeFileSync(path.join(conf.folder as string, `asset-${asset.id}.zip`), data);
+                        command = `cd ${conf.folder} && unzip asset-${asset.id}.zip && rm asset-${asset.id}.zip && chown -R ${conf.os_user}:${conf.os_user} ${conf.folder}`;
+                    })
+                    .catch(err => console.error('An error occured while downloading asset :', err));
+                }
+
+                if(!command) return;
+
                 const exe: ChildProcess = exec(command, (error, stdout, stderr): void => {
                     if (error) {
                         console.error(error.message);

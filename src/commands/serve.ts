@@ -104,18 +104,19 @@ export default {
                 return;
             }
 
-            if(!verifySignature(repo.secret || "", headers['x-hub-signature-256'] as string || "", payload)) {
-                res.status(401).send('Invalid signature');
-                return;
-            }
-
-            res.status(202).send('Accepted');
-
             // Check if the event is supported by the git-synchronizer (https://docs.github.com/en/webhooks/webhook-events-and-payloads)
             const event: string | undefined = headers["x-github-event"] as string;
             if(event === "ping"){
+                res.status(202).send('Accepted');
                 console.log("Received ping event from GitHub");
             } else if(event === "push" || event === "workflow_run" || event === "release"){
+                if(!verifySignature(repo[event].secret || "", headers['x-hub-signature-256'] as string || "", payload)) {
+                    res.status(401).send('Invalid signature');
+                    return;
+                }
+
+                res.status(202).send('Accepted');
+
                 let conf: RepoSyncConf | undefined;
 
                 if(event === "push"){
@@ -214,6 +215,7 @@ export default {
                     }
                 });
             } else {
+                res.status(202).send('Accepted');
                 console.log(`Received ${event} event from GitHub (not handled)`);
             }
         });

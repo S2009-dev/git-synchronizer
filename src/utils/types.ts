@@ -29,6 +29,8 @@ export type ServerConf = {
  * Structure of a repository sync configuration in the config file.
  */
 export type RepoSyncConf = {
+    secret?: string
+    hook_id?: number
     folder?: string
     dl_filename?: string
     os_user?: string
@@ -40,7 +42,6 @@ export type RepoSyncConf = {
  * @requires RepoSyncConf
  */
 export type RepoConf = {
-    secret: string
     push: RepoSyncConf
     workflow_run: RepoSyncConf
     release: RepoSyncConf

@@ -75,7 +75,6 @@ export default {
         const config: UserConf = {
             repositories: {
                 [cmd.args[1] ?? "unknown"]: {
-                    secret: createHash('sha256').update(crypto.randomUUID()).digest('hex'),
                     push: {},
                     release: {},
                     workflow_run: {}
@@ -84,6 +83,8 @@ export default {
         };
 
         const repoSync: RepoSyncConf = {
+            secret: createHash('sha256').update(crypto.randomUUID()).digest('hex'),
+            hook_id: 0,
             folder: cmd.args[3],
             dl_filename: cmd.args[5],
             os_user: cmd.args[4],
@@ -389,7 +390,7 @@ export default {
                         url: `${configManager.get("server.address")}:${configManager.get("server.port")}`,
                         content_type: "json",
                         insecure_ssl: 0,
-                        secret: config.repositories[sync.repository].secret,
+                        secret: repoSync.secret as string,
                     }
                 }
                 
@@ -407,6 +408,9 @@ export default {
                     console.log(`Failed to create webhook for repository ${sync.git_user}/${sync.repository}: ${response.statusText}`);
                     console.log("Sync folder configured, but you must set up the webhook manually.")
                 } else {
+                    const data = await response.json();
+                    
+                    configManager.set(`users.${sync.git_user}.repositories.${sync.repository}.${sync.action}.hook_id`, data.id)
                     console.log("Sync folder configured successfully.");
                 }
             } else {

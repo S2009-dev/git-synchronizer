@@ -1,0 +1,47 @@
+name: 🐛 Bug Report
+description: Reporting bugs helps us improve the tool!
+title: "[BUG]: "
+
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: The more details, the faster we can find the bug!
+      placeholder: I have a problem with...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce the bug?
+      placeholder: |
+        1. Download and install the tool
+        2. Add a user
+        3. Init a sync
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: OS
+      description: On which operating system did you encounter the bug?
+      placeholder: Windows 10, Debian 12...
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Version of git-synchronizer
+      description: git-synchronizer --version
+      placeholder: "latest"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Version of node.js
+      description: node --version
+      placeholder: "latest"
+    validations:
+      required: true

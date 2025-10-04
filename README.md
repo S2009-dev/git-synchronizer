@@ -1,4 +1,8 @@
-# git-synchronizer :octocat:
+# :warning: This project is no longer maintained
+
+The project is no longer maintained as we can now use the [GitHub Actions](https://github.com/features/actions) feature to synchronize our repositories.
+
+## git-synchronizer :octocat:
 
 ![GitHub Release](https://img.shields.io/github/v/release/S2009-dev/git-synchronizer)
 ![GitHub License](https://img.shields.io/github/license/S2009-dev/git-synchronizer)

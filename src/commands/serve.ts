@@ -24,12 +24,17 @@ export default {
      * @description Run the synchronizer server
      * 
      * @argument -p / --port 
-     * @param [port] Port to run the server on (can also be set in the config)
+     * @param [port] Override the port to run the server on (can also be set in the config)
      * @default 3000
+     * 
+     * @argument -a / --address
+     * @param [address] Override the address to run the server on (can also be set in the config)
+     * @default localhost
      * 
      * @returns "serve" command object
      * 
      * @remarks If the port argument is set, it will override the config's port
+     * @remarks If the address argument is set, it will override the config's address
      * 
      * @example ```sh
      *  git-synchronizer serve --port 1234
@@ -38,7 +43,8 @@ export default {
     cmd: new Command()
         .name("serve")
         .description("Run the synchronizer server")
-        .option('-p, --port [port]', 'Port to run the server on (can also be set in the config)', parseInt),
+        .option('-p, --port [port]', 'Override the port to run the server on (can also be set in the config)', parseInt)
+        .option('-a, --address [address]', 'Override the address to run the server on (can also be set in the config)'),
         
     /**
      * Run an express server to listen for Github API events
@@ -55,6 +61,7 @@ export default {
     callback: async (_cmd: Command, options: ServeOptions): Promise<void> => {
         const app: express.Application = express();
         const port: number = typeof options.port === 'number' && options.port > 0 ? options.port : configManager.get('server.port') || 3000;
+        const address: string = typeof options.address === 'string' ? options.address : configManager.get('server.address') || "localhost";
         const redirectUrl: string = "https://npmjs.com/package/git-synchronizer";
 
         app.use(express.json())
@@ -73,31 +80,44 @@ export default {
             const headers = req.headers;
             const payload = req.body;
 
+            const ownerName: string = payload.repository.owner.login;
+            const repoName: string = payload.repository.name;
+            const repo: RepoConf | undefined = configManager.get(`users.${ownerName}.repositories.${repoName.toLowerCase()}`);
+
             const existingUser: UserConf | undefined = configManager.get(`users.${payload.repository.owner.login}`);
             
             if(!existingUser) {
-                res.status(404).send(`User ${payload.repository.owner.login} not found in server configuration`);
+                const err: string = `User ${payload.repository.owner.login} not found in server configuration`;
+                
+                res.status(404).send(err);
+                console.log(err);
+
                 return;
             }
 
-            if(!verifySignature(existingUser.secret || "", headers['x-hub-signature-256'] as string || "", payload)) {
-                res.status(401).send('Invalid signature');
+            if(!repo) {
+                const err: string = `Repository ${payload.repository.full_name} isn't handled by the server.`;
+                
+                res.status(400).send(err);
+                console.log(err);
+                
                 return;
             }
-
-            res.status(202).send('Accepted');
 
             // Check if the event is supported by the git-synchronizer (https://docs.github.com/en/webhooks/webhook-events-and-payloads)
             const event: string | undefined = headers["x-github-event"] as string;
             if(event === "ping"){
+                res.status(202).send('Accepted');
                 console.log("Received ping event from GitHub");
             } else if(event === "push" || event === "workflow_run" || event === "release"){
-                const ownerName: string = payload.repository.owner.login;
-                const repoName: string = payload.repository.name;
-                const repo: RepoConf | undefined = configManager.get(`users.${ownerName}.repositories.${repoName.toLowerCase()}`);
+                if(!verifySignature(repo[event].secret || "", headers['x-hub-signature-256'] as string || "", payload)) {
+                    res.status(401).send('Invalid signature');
+                    return;
+                }
+
+                res.status(202).send('Accepted');
+
                 let conf: RepoSyncConf | undefined;
-                
-                if(!repo) return console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
 
                 if(event === "push"){
                     conf = repo.push;
@@ -195,13 +215,14 @@ export default {
                     }
                 });
             } else {
+                res.status(202).send('Accepted');
                 console.log(`Received ${event} event from GitHub (not handled)`);
             }
         });
 
         // Run the express server
         app.listen(port, (): void => {
-            console.log(`Synchronizer server is listening on port ${port} (Press CTRL + C to stop it).`);
+            console.log(`Synchronizer server is listening on  ${address}:${port} (Press CTRL + C to stop it).`);
         });
     }
 }

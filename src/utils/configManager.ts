@@ -19,6 +19,7 @@ export default new Conf({
         server: {
             type: 'object',
             properties: {
+                address: { type: 'string' },
                 port: { type: 'number' },
             }
         },
@@ -27,7 +28,6 @@ export default new Conf({
             propertyNames: { type: 'string' },
             properties: {
                 token: { type: 'string' },
-                secret: { type: 'string' },
                 repositories: { 
                     type: 'object',
                     propertyNames: { type: 'string' },
@@ -35,6 +35,8 @@ export default new Conf({
                         push: { 
                             type: 'object',
                             properties: {
+                                secret: { type: 'string' },
+                                hook_id: {type: 'number' },
                                 folder: { type: 'string' },
                                 os_user: { type: 'string' },
                                 postcmd: { type: 'string' },
@@ -43,6 +45,8 @@ export default new Conf({
                         release: { 
                             type: 'object',
                             properties: {
+                                secret: { type: 'string' },
+                                hook_id: {type: 'number' },
                                 folder: { type: 'string' },
                                 dl_filename: { type: 'string' },
                                 os_user: { type: 'string' },
@@ -52,6 +56,8 @@ export default new Conf({
                         workflow_run: { 
                             type: 'object',
                             properties: {
+                                secret: { type: 'string' },
+                                hook_id: {type: 'number' },
                                 folder: { type: 'string' },
                                 dl_filename: { type: 'string' },
                                 os_user: { type: 'string' },

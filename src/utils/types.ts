@@ -21,6 +21,7 @@ export type CmdConf = {
  * Structure of the server configuration in the config file.
  */
 export type ServerConf = {
+    address: string
     port: number
 }
 
@@ -28,6 +29,8 @@ export type ServerConf = {
  * Structure of a repository sync configuration in the config file.
  */
 export type RepoSyncConf = {
+    secret?: string
+    hook_id?: number
     folder?: string
     dl_filename?: string
     os_user?: string
@@ -50,7 +53,6 @@ export type RepoConf = {
  */
 export type UserConf = {
     token?: string
-    secret?: string
     repositories: {
         [name: string]: RepoConf
     }
@@ -73,7 +75,7 @@ export type Config = {
  */
 export type ConfigOptions = {
     open?: boolean
-    server?: number
+    server?: boolean | string[]
     addUser?: boolean | string[]
     removeUser?: string
     removeSync?: boolean | string[]
@@ -84,6 +86,7 @@ export type ConfigOptions = {
  */
 export type ServeOptions = {
     port?: number
+    address?: string
 }
 
 /**
@@ -99,7 +102,23 @@ export type SyncConf = {
 }
 
 /**
- * Structure of the algorithm used to verify the signature.
+ * Structure of a Github webhook.
+ * @see https://docs.github.com/en/rest/repos/webhooks#create-a-repository-webhook
+ */
+export type Webhook = {
+    name: string
+    active: boolean
+    events: string[]
+    config: {
+        url: string
+        content_type: string
+        insecure_ssl: number
+        secret: string
+    }
+}
+
+/**
+ * Structure of the algorithm used to verify the signature of a GitHub webhook delivery.
  * @see https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
  */
 export type VerifAlgo = {

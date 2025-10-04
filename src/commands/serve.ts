@@ -24,12 +24,17 @@ export default {
      * @description Run the synchronizer server
      * 
      * @argument -p / --port 
-     * @param [port] Port to run the server on (can also be set in the config)
+     * @param [port] Override the port to run the server on (can also be set in the config)
      * @default 3000
+     * 
+     * @argument -a / --address
+     * @param [address] Override the address to run the server on (can also be set in the config)
+     * @default localhost
      * 
      * @returns "serve" command object
      * 
      * @remarks If the port argument is set, it will override the config's port
+     * @remarks If the address argument is set, it will override the config's address
      * 
      * @example ```sh
      *  git-synchronizer serve --port 1234
@@ -38,7 +43,8 @@ export default {
     cmd: new Command()
         .name("serve")
         .description("Run the synchronizer server")
-        .option('-p, --port [port]', 'Port to run the server on (can also be set in the config)', parseInt),
+        .option('-p, --port [port]', 'Override the port to run the server on (can also be set in the config)', parseInt)
+        .option('-a, --address [address]', 'Override the address to run the server on (can also be set in the config)'),
         
     /**
      * Run an express server to listen for Github API events
@@ -55,6 +61,7 @@ export default {
     callback: async (_cmd: Command, options: ServeOptions): Promise<void> => {
         const app: express.Application = express();
         const port: number = typeof options.port === 'number' && options.port > 0 ? options.port : configManager.get('server.port') || 3000;
+        const address: string = typeof options.address === 'string' ? options.address : configManager.get('server.address') || "localhost";
         const redirectUrl: string = "https://npmjs.com/package/git-synchronizer";
 
         app.use(express.json())
@@ -201,7 +208,7 @@ export default {
 
         // Run the express server
         app.listen(port, (): void => {
-            console.log(`Synchronizer server is listening on port ${port} (Press CTRL + C to stop it).`);
+            console.log(`Synchronizer server is listening on  ${address}:${port} (Press CTRL + C to stop it).`);
         });
     }
 }

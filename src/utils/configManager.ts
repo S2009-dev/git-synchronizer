@@ -19,6 +19,7 @@ export default new Conf({
         server: {
             type: 'object',
             properties: {
+                address: { type: 'string' },
                 port: { type: 'number' },
             }
         },

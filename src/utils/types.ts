@@ -21,6 +21,7 @@ export type CmdConf = {
  * Structure of the server configuration in the config file.
  */
 export type ServerConf = {
+    address: string
     port: number
 }
 
@@ -73,7 +74,7 @@ export type Config = {
  */
 export type ConfigOptions = {
     open?: boolean
-    server?: number
+    server?: boolean | string[]
     addUser?: boolean | string[]
     removeUser?: string
     removeSync?: boolean | string[]
@@ -84,6 +85,7 @@ export type ConfigOptions = {
  */
 export type ServeOptions = {
     port?: number
+    address?: string
 }
 
 /**

@@ -24,11 +24,12 @@ export default {
      * @description Open the configuration file
      * 
      * @argument -s / --server
-     * @param port Set the server port (number)
+     * @param serverinfos Set the server 'address' (string) and 'port' (number)
+     * @default localhost
      * @default 3000
      * 
      * @argument --add-user
-     * @param userinfos Add a new GitHub user to the configuration ([username] [token] [secret])
+     * @param userinfos Add a new GitHub user to the configuration ([username] [token])
      * 
      * @argument --remove-user
      * @param username Remove a GitHub user from the configuration
@@ -51,8 +52,8 @@ export default {
         .name("config")
         .description("Configure the Synchronizer")
         .option("-o, --open", "Open the configuration file")
-        .option("-s, --server [port]", "Set the server port ([number] default: 3000)", parseInt)
-        .option("--add-user [userinfos...]", "Add a new GitHub user to the configuration ([username] [token] [secret])")
+        .option("-s, --server [serverinfos...]", "Set the server 'address' ([string] default: localhost) and 'port' ([number] default: 3000)")
+        .option("--add-user [userinfos...]", "Add a new GitHub user to the configuration ([username] [token])")
         .option("--remove-user [username]", "Remove a GitHub user from the configuration")
         .option("--remove-sync [syncinfos...]", "Remove a synced repository from the configuration ([username] [repo-name])"),
 
@@ -76,11 +77,82 @@ export default {
                 spawn("nano", [configManager.path], { stdio: "inherit", shell: true });
             }
         } else if(options.server) {
-            if(typeof options.server === "number") {
+            const serverInfos: string[] = options.server as string[];
+            let address: string = serverInfos[0] || "localhost";
+            let port: number = parseInt(serverInfos[1]) || 3000;
+
+            if(address !== "localhost") {
                 const confirm: { answer: boolean } = await inquirer.prompt({
                     type: "confirm",
                     name: "answer",
-                    message: `Are you sure you want to set the server port to ${options.server}?`,
+                    message: `Are you sure you want to set the server address to ${address}?`,
+                    default: false,
+                }).catch((err: Error) => {
+                    if (err.message.includes('User force closed the prompt with SIGINT')) {
+                        console.log('Operation canceled');
+                        return process.exit(0);
+                    } else {
+                        console.error(err.message);
+                        return process.exit(1);
+                    }
+                });
+
+                if(confirm.answer) {
+                    configManager.set("server.address", address);
+                    console.log(`Server address set to ${address}`);                    
+                } else {
+                    console.log("Operation canceled");
+                }
+            } else {
+                console.log(`Server address is currently set to ${configManager.get("server.address") || 'localhost'}`);
+                
+                const confirm: { answer: boolean } = await inquirer.prompt({
+                    type: "confirm",
+                    name: "answer",
+                    message: "Do you want to change the server address?",
+                    default: false,
+                }).catch((err: Error) => {
+                    if (err.message.includes('User force closed the prompt with SIGINT')) {
+                        console.log('Operation canceled');
+                        return process.exit(0);
+                    } else {
+                        console.error(err.message);
+                        return process.exit(1);
+                    }
+                });
+
+                if(confirm.answer) {
+                    const addressPrompt: { answer: string } = await inquirer.prompt({
+                        type: "input",
+                        name: "answer",
+                        message: "Enter the new server address:",
+                    }).catch((err: Error) => {
+                        if (err.message.includes('User force closed the prompt with SIGINT')) {
+                            console.log('Operation canceled');
+                            return process.exit(0);
+                        } else {
+                            console.error(err.message);
+                            return process.exit(1);
+                        }
+                    });
+
+                    configManager.set("server.address", addressPrompt.answer);
+                    console.log(`Server address set to ${addressPrompt.answer}`);
+                } else {
+                    console.log("Operation canceled");
+                }
+            }
+
+            if(configManager.get("server.address") === "localhost"){
+                const publicIp = await (await fetch('https://api.ipify.org?format=json')).json().catch(() => null);
+                configManager.set("server.address", publicIp?.ip || "localhost");
+            }
+
+            if(!isNaN(port)) {
+                const confirm: { answer: boolean } = await inquirer.prompt({
+                    type: "confirm",
+                    name: "answer",
+                    message: `Are you sure you want to set the server port to ${port}?`,
                     default: false,
                 }).catch((err: Error) => {
                     if (err.message.includes('User force closed the prompt with SIGINT')) {
@@ -141,7 +213,6 @@ export default {
             const userinfos = options.addUser as string[];
             let username: string = userinfos[0] || "";
             let token: string = userinfos[1] || "";
-            let secret: string = userinfos[2] || "";
 
             if(!username){
                 const namePrompt: { answer: string } = await inquirer.prompt({
@@ -182,28 +253,10 @@ export default {
                 token = tokenPrompt.answer;
             }
 
-            if(!secret){
-                const secretPrompt: { answer: string } = await inquirer.prompt({
-                    type: "input",
-                    name: "answer",
-                    message: "Enter the Webhook secret:",
-                }).catch((err: Error) => {
-                    if (err.message.includes('User force closed the prompt with SIGINT')) {
-                        console.log('Operation canceled');
-                        return process.exit(0);
-                    } else {
-                        console.error(err.message);
-                        return process.exit(1);
-                    }
-                });
-
-                secret = secretPrompt.answer;
-            }
-
             const confirm: { answer: boolean } = await inquirer.prompt({
                 type: "confirm",
                 name: "answer",
-                message: `Are you sure you want to add this user to the configuration?\nUsername: ${username}\nToken: ${token}\nSecret: ${secret}\n`,
+                message: `Are you sure you want to add this user to the configuration?\nUsername: ${username}\nToken: ${token}\n`,
                 default: false,
             }).catch((err: Error) => {
                 if (err.message.includes('User force closed the prompt with SIGINT')) {
@@ -216,8 +269,8 @@ export default {
             });
 
             if(confirm.answer) {
-                configManager.set(`users.${username}`, { token, secret, repositories: {} });
-                console.log(`User ${username} added to configuration`);
+                configManager.set(`users.${username}`, { token, repositories: {} });
+                console.log(`User ${username} was added to the configuration`);
             } else {
                 console.log("Operation cancelled");
             }
@@ -275,7 +328,7 @@ export default {
 
                 if(confirm.answer) {
                     configManager.delete(`users.${username}`);
-                    console.log(`User ${username} removed from configuration`);
+                    console.log(`User ${username} was removed from the configuration`);
                 } else {
                     console.log("Operation cancelled");
                 }

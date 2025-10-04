@@ -1,0 +1,12 @@
+name: ✨ Improvement/Feature
+description: Has an idea to improve the project ?
+title: "[FEATURE]: "
+
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: Make room for your creativity by detailing what you want
+      placeholder: It would be cool to add a new command to...
+    validations:
+      required: true

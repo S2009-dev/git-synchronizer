@@ -389,7 +389,7 @@ export default {
                     config: {
                         url: `${configManager.get("server.address")}:${configManager.get("server.port")}`,
                         content_type: "json",
-                        insecure_ssl: 0,
+                        insecure_ssl: !configManager.get("server.address").startsWith("https") ? 0 : 1,
                         secret: repoSync.secret as string,
                     }
                 }

@@ -80,14 +80,31 @@ export default {
             const headers = req.headers;
             const payload = req.body;
 
+            const ownerName: string = payload.repository.owner.login;
+            const repoName: string = payload.repository.name;
+            const repo: RepoConf | undefined = configManager.get(`users.${ownerName}.repositories.${repoName.toLowerCase()}`);
+
             const existingUser: UserConf | undefined = configManager.get(`users.${payload.repository.owner.login}`);
             
             if(!existingUser) {
-                res.status(404).send(`User ${payload.repository.owner.login} not found in server configuration`);
+                const err: string = `User ${payload.repository.owner.login} not found in server configuration`;
+                
+                res.status(404).send(err);
+                console.log(err);
+
                 return;
             }
 
-            if(!verifySignature(existingUser.secret || "", headers['x-hub-signature-256'] as string || "", payload)) {
+            if(!repo) {
+                const err: string = `Repository ${payload.repository.full_name} isn't handled by the server.`;
+                
+                res.status(400).send(err);
+                console.log(err);
+                
+                return;
+            }
+
+            if(!verifySignature(repo.secret || "", headers['x-hub-signature-256'] as string || "", payload)) {
                 res.status(401).send('Invalid signature');
                 return;
             }
@@ -99,12 +116,7 @@ export default {
             if(event === "ping"){
                 console.log("Received ping event from GitHub");
             } else if(event === "push" || event === "workflow_run" || event === "release"){
-                const ownerName: string = payload.repository.owner.login;
-                const repoName: string = payload.repository.name;
-                const repo: RepoConf | undefined = configManager.get(`users.${ownerName}.repositories.${repoName.toLowerCase()}`);
                 let conf: RepoSyncConf | undefined;
-                
-                if(!repo) return console.log(`Repository ${payload.repository.full_name} isn't handled by the server.`);
 
                 if(event === "push"){
                     conf = repo.push;

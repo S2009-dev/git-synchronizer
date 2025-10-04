@@ -40,6 +40,7 @@ export type RepoSyncConf = {
  * @requires RepoSyncConf
  */
 export type RepoConf = {
+    secret: string
     push: RepoSyncConf
     workflow_run: RepoSyncConf
     release: RepoSyncConf
@@ -51,7 +52,6 @@ export type RepoConf = {
  */
 export type UserConf = {
     token?: string
-    secret?: string
     repositories: {
         [name: string]: RepoConf
     }
@@ -101,7 +101,23 @@ export type SyncConf = {
 }
 
 /**
- * Structure of the algorithm used to verify the signature.
+ * Structure of a Github webhook.
+ * @see https://docs.github.com/en/rest/repos/webhooks#create-a-repository-webhook
+ */
+export type Webhook = {
+    name: string
+    active: boolean
+    events: string[]
+    config: {
+        url: string
+        content_type: string
+        insecure_ssl: number
+        secret: string
+    }
+}
+
+/**
+ * Structure of the algorithm used to verify the signature of a GitHub webhook delivery.
  * @see https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
  */
 export type VerifAlgo = {

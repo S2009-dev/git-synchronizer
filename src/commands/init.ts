@@ -2,8 +2,9 @@ import { Argument, Command } from "commander";
 import inquirer from "inquirer";
 import os from "os";
 import configManager from "../utils/configManager";
-import { RepoConf, RepoSyncConf, SyncConf, UserConf } from "../utils/types";
+import { RepoConf, RepoSyncConf, SyncConf, UserConf, Webhook } from "../utils/types";
 import { ChildProcess, exec } from "child_process";
+import { createHash } from "crypto"
 import fs from "fs";
 import path from "path";
 
@@ -74,6 +75,7 @@ export default {
         const config: UserConf = {
             repositories: {
                 [cmd.args[1] ?? "unknown"]: {
+                    secret: createHash('sha256').update(crypto.randomUUID()).digest('hex'),
                     push: {},
                     release: {},
                     workflow_run: {}
@@ -376,9 +378,37 @@ export default {
         });
 
         // Handle child process exit
-        exe.on("exit", (code: number) => {
+        exe.on("exit", async (code: number) => {
             if (code === 0) {
-                console.log("Sync folder configured successfully.");
+                const url: string = `https://api.github.com/repos/${sync.git_user}/${sync.repository}/hooks`;
+                const webhook: Webhook = {
+                    name: "web",
+                    active: true,
+                    events: [sync.action],
+                    config: {
+                        url: `${configManager.get("server.address")}:${configManager.get("server.port")}`,
+                        content_type: "json",
+                        insecure_ssl: 0,
+                        secret: config.repositories[sync.repository].secret,
+                    }
+                }
+                
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                    "Authorization": `Bearer ${sync.token}`,
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                    },
+                    body: JSON.stringify(webhook),
+                });
+
+                if (!response.ok) {
+                    console.log(`Failed to create webhook for repository ${sync.git_user}/${sync.repository}: ${response.statusText}`);
+                    console.log("Sync folder configured, but you must set up the webhook manually.")
+                } else {
+                    console.log("Sync folder configured successfully.");
+                }
             } else {
                 configManager.delete(`users.${sync.git_user}.repositories.${sync.repository}.${sync.action}`);
             }

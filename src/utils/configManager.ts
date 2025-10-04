@@ -28,11 +28,11 @@ export default new Conf({
             propertyNames: { type: 'string' },
             properties: {
                 token: { type: 'string' },
-                secret: { type: 'string' },
                 repositories: { 
                     type: 'object',
                     propertyNames: { type: 'string' },
                     properties: {
+                        secret: { type: 'string' },
                         push: { 
                             type: 'object',
                             properties: {
